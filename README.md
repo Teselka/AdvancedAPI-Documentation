@@ -302,7 +302,7 @@ local LerpTime = GetLerpTime();
 
 ### RotateMovement(pCmd, vAngles) -- Rotating movement into vAngles direction
 - pCmd - usercmd_t needed to get forward, sidemoves and viewangles
-- vAngles - vAngles (Forces vector if used angle_t) in what we want to go
+- vAngles - Vector (Forces vector if used angle_t) in what we want to go
 ```
 local LocalPlayer = entitylist:get_local_player();
 local vSource = VectorAddition(LocalPlayer:get_prop_vector(m_vecOrigin), LocalPlayer:get_prop_vector(m_vecViewOffset));
@@ -383,7 +383,7 @@ MOVETYPE_MAX_BITS = 4;
 ## Buttons
 ```
 IN_ATTACK   = 1;       --  (1 << 0)  -- Fire weapon
-IN_JUMP 	= 2;       --  (1 << 1)  -- Jump
+IN_JUMP 	  = 2;       --  (1 << 1)  -- Jump
 IN_DUCK     = 4;       --  (1 << 2)  -- Crouch
 IN_FORWARD  = 8;       --  (1 << 3)  -- Walk forward
 IN_BACK     = 16;      --  (1 << 4)  -- Walk backwards
