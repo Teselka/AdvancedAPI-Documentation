@@ -182,6 +182,15 @@ local Number = vec3_t.new(1, 4, 9);
 local Multiplicated = VectorNumberMultiplication(Vector, Number); -- returns vec3_t object
 ```
 
+### GetMiddlePoint(vFirst, vSecond) -- Calculating middle point between two vectors
+- vFirst - Vector first
+- vSecond - Vector second
+```
+local vSource = VectorAddition(LocalPlayer:get_prop_vector(m_vecOrigin), LocalPlayer:get_prop_vector(m_vecViewOffset));
+local vDest = VectorAddition(Teammate:get_prop_vector(m_vecOrigin), Teammate:get_prop_vector(m_vecViewOffset));
+local MiddlePoint = GetMiddlePoint(vSource, vDest); -- returns vec3_t object
+```
+
 ### CalcAngle(vecSource, vecDestination) -- Calculating viewangles to aim at target vector
 - vecSource - Vector (Forces vector if used angle_t) from we want to aim
 - vecDestination - Vector (Forces vector if used angle_t) on what we want to aim
@@ -312,6 +321,26 @@ pCmd.forwardmove = 250;
 RotateMovement(pCmd, vAngles);
 ```
 
+### ApproachAngle(target, value, speed) -- From ValveSDK, no description :(
+#### https://github.com/ValveSoftware/source-sdk-2013/blob/0d8dceea4310fde5706b3ce1c70609d72a38efdf/sp/src/mathlib/mathlib_base.cpp#L3438
+- target - float value
+- value - float value
+- speed - float value
+```
+local m_flGoalFeetYaw = ApproachAngle(m_flEyeYaw, m_flGoalFeetYaw, ((m_flStopToFullRunningFraction * 20.0) + 30.0) * m_iLastClientSideAnimationUpdateFramecount);
+-- returns float
+```
+
+### AngleDifference(destAngle, srcAngle) -- From ValveSDK, getting delta between two angles
+#### https://github.com/ValveSoftware/source-sdk-2013/blob/master/sp/src/mathlib/mathlib_base.cpp#L3466
+- destAngle - float first angle
+- srcAngle - float second angle
+```
+local Delta = AngleDifference(m_flGoalFeetYaw, LowerBodyYaw); -- returns float
+```
+
+
+
 ## Helper functions
 ### HasC4(Player) -- Checking if player has c4
 - Player - entity_t what we want to check
@@ -326,7 +355,7 @@ local C4 = HasC4(LocalPlayer);
 local LocalPlayer = entitylist:get_local_player();
 local ActiveWeaponHandle = LocalPlayer:get_prop_int(m_hActiveWeapon);
 local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
-local WeaponData = GetWeaponData(Weapon); -- cdata<int*> object
+local WeaponData = GetWeaponData(Weapon); -- returns cdata<int*> object
 ```
 
 ### IsKnife(Weapon) -- Checking if weapon is knife
@@ -335,7 +364,7 @@ local WeaponData = GetWeaponData(Weapon); -- cdata<int*> object
 local LocalPlayer = entitylist:get_local_player();
 local ActiveWeaponHandle = LocalPlayer:get_prop_int(m_hActiveWeapon);
 local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
-local Knife = IsKnife(Weapon);
+local Knife = IsKnife(Weapon); -- returns boolean
 ```
 
 ### IsNade(Weapon) -- Checking if weapon is nade
@@ -344,11 +373,35 @@ local Knife = IsKnife(Weapon);
 local LocalPlayer = entitylist:get_local_player();
 local ActiveWeaponHandle = LocalPlayer:get_prop_int(m_hActiveWeapon);
 local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
-local Nade = IsNade(Weapon);
+local Nade = IsNade(Weapon); -- returns boolean
 ```
 
-### Structures and enums
-## WeaponInfo_t -- Not finished, because brain issue
+## Exploits
+### IsExploitRecharged(LocalPlayer, Weapon, Exploit) -- Checking if one of exploits is recharged 
+#### Shift values from https://yougame.biz/threads/134913/
+- LocalPlayer - entity_t local player
+- Weapon - entity_t  active weapon
+- Exploit - exploit what we want to know recharge
+```
+local LocalPlayer = entitylist:get_local_player();	
+local ActiveWeaponHandle = LocalPlayer:get_prop_int(m_hActiveWeapon);
+local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
+local IsRecharged = IsExploitRecharged(LocalPlayer, Weapon, ui.get_int("ragebot_active_exploit")); -- returns boolean
+```
+
+### GetExploitCharge(LocalPlayer, Weapon, Exploit)
+- LocalPlayer - entity_t local player
+- Weapon - entity_t  active weapon
+- Exploit - exploit what we want to know recharge
+```
+local LocalPlayer = entitylist:get_local_player();	
+local ActiveWeaponHandle = LocalPlayer:get_prop_int(m_hActiveWeapon);
+local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
+local Recharge = GetExploitCharge(LocalPlayer, Weapon, ui.get_int("ragebot_active_exploit")); -- returns float
+```
+
+## Structures and enums
+### WeaponInfo_t -- Not finished yet, because brain issue
 ```
 WEAPDATA_MAX_CLIP = 0x05;
 WEAPDATA_MAX_RESERVED_AMMO = 0x09; -- Max clip 2
@@ -362,7 +415,7 @@ WEAPDATA_PENETRATION = 0x72; -- float
 ```
 
 
-## MoveType_t
+### MoveType_t
 ```
 MOVETYPE_NONE = 0; -- Freezes the entity, outside sources can't move it. 
 MOVETYPE_ISOMETRIC = 1; -- For players in TF2 commander view etc. Do not use this for normal players! 
@@ -380,7 +433,7 @@ MOVETYPE_LAST = MOVETYPE_CUSTOM;
 MOVETYPE_MAX_BITS = 4;
 ```
 
-## Buttons
+### Buttons
 ```
 IN_ATTACK   = 1;       --  (1 << 0)  -- Fire weapon
 IN_JUMP 	  = 2;       --  (1 << 1)  -- Jump
@@ -430,7 +483,7 @@ FL_FAKECLIENT= 512;-- (1 << 9), Fake client, simulated server side; don't send n
 FL_INWATER = 1024; -- (1 << 10), // In water
 ```
 
-## ItemDefinitionIndex
+### ItemDefinitionIndex
 ```
 WEAPON_NONE = 0;
 WEAPON_DEAGLE = 1;
@@ -521,7 +574,7 @@ WEAPON_KNIFE_OUTDOOR = 590345;
 WEAPON_KNIFE_SKELETON = 590349;
 ```
 
-## Hitboxes
+### Hitboxes
 ```
 HITBOX_HEAD = 0;
 HITBOX_NECK = 1;
