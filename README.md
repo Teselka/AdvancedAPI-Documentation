@@ -389,7 +389,7 @@ local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
 local IsRecharged = IsExploitRecharged(LocalPlayer, Weapon, ui.get_int("ragebot_active_exploit")); -- returns boolean
 ```
 
-### GetExploitCharge(LocalPlayer, Weapon, Exploit)
+### GetExploitCharge(LocalPlayer, Weapon, Exploit) -- Calcuating exploit charge time
 - LocalPlayer - entity_t local player
 - Weapon - entity_t  active weapon
 - Exploit - exploit what we want to know recharge
@@ -398,6 +398,7 @@ local LocalPlayer = entitylist:get_local_player();
 local ActiveWeaponHandle = LocalPlayer:get_prop_int(m_hActiveWeapon);
 local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
 local Recharge = GetExploitCharge(LocalPlayer, Weapon, ui.get_int("ragebot_active_exploit")); -- returns float
+-- returns 0 if exploit is charged
 ```
 
 ## Structures and enums
