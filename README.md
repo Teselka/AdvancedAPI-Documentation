@@ -4,6 +4,9 @@ Documentation for nixware.cc AdvancedAPI lua
 ## How to use
 Move AdvancedAPI.lua in directory Steam directory/steamapps/common/Counter-Strike Global Offensive/lua
 
+## Script globals
+ADVANCED_API_VERSION = 1.3; -- Current AdvancedAPI version
+
 ## Available netvars
 - m_fFlags
 - m_iHealth
@@ -29,29 +32,31 @@ Move AdvancedAPI.lua in directory Steam directory/steamapps/common/Counter-Strik
 - m_iClip2
 - m_fAccuracyPenalty
 - m_flPostponeFireReadyTime
-- m_flNextPrimaryAttack  // Hazedumper
-- m_iItemDefinitionIndex // Hazedumper
-- m_vecViewOffset        // Hazedumper
-- m_nTickBase            // Hazedumper
-- m_MoveType             // Hazedumper
+- m_flNextPrimaryAttack   -- Hazedumper
+- m_flNextSecondaryAttack -- Hazedumper
+- m_iShotsFired           -- Hazedumper
+- m_iItemDefinitionIndex  -- Hazedumper
+- m_vecViewOffset         -- Hazedumper
+- m_nTickBase             -- Hazedumper
+- m_MoveType              -- Hazedumper
 - m_vecVelocity(Lua table, has 3 positions 0, 1, 2)
 
 ## Math variables
 - NULL = 0
-- M_PI = 3.14159265358979323846   // PI Number
-- M_180_PI = 0.0174533  // PI Number, divided by 180
-- M_PI_180 = 57.2958    // PI Number, multiplicated by 180
-- INT_MAX  = 2147483647 // From C/C++ library
-- INFINITE = math.huge  // Infinte number from lua math library
+- M_PI = 3.14159265358979323846  -- PI Number
+- M_180_PI = 0.0174533  -- PI Number, divided by 180
+- M_PI_180 = 57.2958    -- PI Number, multiplicated by 180
+- INT_MAX  = 2147483647 -- From C/C++ library
+- INFINITE = math.huge  -- Infinte number from lua math library
 
 ## Math functions
 ### round(x) - Rounding a number
 x - Number for rounding
 ```
 
-local x = round(1.5); // returns 2
+local x = round(1.5); -- returns integer
 ```
-### hasbit(x, p) - Checking if number has specific bit 
+### hasbit(x, p) - Checking if number has a specific bit 
 - x - Number
 - p - Sought bit
 ```
@@ -65,7 +70,7 @@ local OnGround = hasbit(Flags, FL_ONGROUND); -- returns boolean
 - min - Min number value
 - max - Max number value
 ```
-local x = clamp(5, 0, 4); -- returns 4
+local x = clamp(5, 0, 4); -- returns integer
 ```
 ### IsInfinite(x) - Checking if number is infinite
 - x - number for checking
@@ -401,6 +406,33 @@ local Recharge = GetExploitCharge(LocalPlayer, Weapon, ui.get_int("ragebot_activ
 -- returns 0 if exploit is charged
 ```
 
+## Libraries
+### Timers lib https://nixware.cc/threads/7591/
+#### Timer.new_timeout(callback, ms) -- Executes function on end of the timer only once
+- callback - Function what we want execute at end of the timer
+- ms - integer delay before executing
+```
+Timer.new_timeout(function()
+   client.notify("Executed!");
+end, 1000);
+```
+
+#### Timers.new_interval(callback, ms) -- Executes function on end of the timer and repeating again
+- callback - Function what we want execute at end of the timer
+- ms - integer delay before executing
+```
+Timer.new_interval(function()
+   client.notify("Executed!");
+end, 1000);
+```
+
+#### Timers.listener() -- Listen for all timers (needed for executing it)
+```
+client.register_callback("paint", function()
+	Timer.listener();
+end);
+```
+
 ## Structures and enums
 ### WeaponInfo_t -- Not finished yet, because brain issue
 ```
@@ -437,7 +469,7 @@ MOVETYPE_MAX_BITS = 4;
 ### Buttons
 ```
 IN_ATTACK   = 1;       --  (1 << 0)  -- Fire weapon
-IN_JUMP 	  = 2;       --  (1 << 1)  -- Jump
+IN_JUMP     = 2;       --  (1 << 1)  -- Jump
 IN_DUCK     = 4;       --  (1 << 2)  -- Crouch
 IN_FORWARD  = 8;       --  (1 << 3)  -- Walk forward
 IN_BACK     = 16;      --  (1 << 4)  -- Walk backwards
@@ -482,6 +514,18 @@ FL_CLIENT	   = 256;-- (1 << 8), Is a player
 FL_FAKECLIENT= 512;-- (1 << 9), Fake client, simulated server side; don't send network messages to them
 -- NON-PLAYER SPECIFIC (i.e., not used by GameMovement or the client .dll ) -- Can still be applied to players, though
 FL_INWATER = 1024; -- (1 << 10), // In water
+```
+
+### ClientFrameStage_t
+```
+FRAME_UNDEFINED = -1;	-- Haven't run any frames yet
+FRAME_START = 0;
+FRAME_NET_UPDATE_START = 1;	-- A network packet is being recieved
+FRAME_NET_UPDATE_POSTDATAUPDATE_START = 2;-- Data has been received and we're going to start calling PostDataUpdate
+FRAME_NET_UPDATE_POSTDATAUPDATE_END = 3;	-- Data has been received and we've called PostDataUpdate on all data recipients
+FRAME_NET_UPDATE_END = 4;	-- We've received all packets, we can now do interpolation, prediction, etc..
+FRAME_RENDER_START = 5;	-- We're about to start rendering the scene
+FRAME_RENDER_END = 6;	-- We've finished rendering the scene.
 ```
 
 ### ItemDefinitionIndex
