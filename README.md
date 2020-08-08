@@ -5,7 +5,7 @@ Documentation for nixware.cc AdvancedAPI lua
 Move AdvancedAPI.lua in directory Steam directory/steamapps/common/Counter-Strike Global Offensive/lua
 
 ## Script globals
-ADVANCED_API_VERSION = 1.3; -- Current AdvancedAPI version
+ADVANCED_API_VERSION = 1.4; -- Current AdvancedAPI version
 
 ## Available netvars
 - m_fFlags
@@ -41,6 +41,17 @@ ADVANCED_API_VERSION = 1.3; -- Current AdvancedAPI version
 - m_MoveType              -- Hazedumper
 - m_vecVelocity(Lua table, has 3 positions 0, 1, 2)
 
+## C Definitions
+```
+typedef void* FARPROC;
+typedef void* HMODULE;
+typedef const char* LPCSTR;
+typedef wchar_t WCHAR;
+typedef const WCHAR* LPCWSTR;
+FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
+HMODULE GetModuleHandleA(LPCSTR lpModuleName);
+```
+
 ## Math variables
 - NULL = 0
 - M_PI = 3.14159265358979323846  -- PI Number
@@ -72,6 +83,14 @@ local OnGround = hasbit(Flags, FL_ONGROUND); -- returns boolean
 ```
 local x = clamp(5, 0, 4); -- returns integer
 ```
+
+### RandomFloat(min, max) - Returns random float, using vstdlib
+- min - Min number value
+- max - Max number value
+```
+local randflt = RandomFloat(0, 10); -- returns float
+```
+
 ### IsInfinite(x) - Checking if number is infinite
 - x - number for checking
 ```
@@ -266,7 +285,7 @@ local viewAngle = vec3_t.new(pCmd.pitch, pCmd.yaw, pCmd.roll);
 local Fov = GetFov(viewAngle, aimAngle);
 ```
 
-### Distance3D(vFirst, vSecond) -- Calculating distance between two 3D vectors
+### Distance3D(vFirst, vSecond) -- Calculating distance between two 3D vectors (Since 1.4 verison returns smaller value)
 - vFirst  - Vector  what we want to convert
 - vSecond - Vector what we want to convert
 ```
@@ -641,4 +660,127 @@ HITBOX_RIGHT_FOREARM = 16;
 HITBOX_LEFT_UPPER_ARM = 17;
 HITBOX_LEFT_FOREARM = 18;
 HITBOX_MAX = 19;
+```
+
+### Bspflags
+```
+CONTENTS_EMPTY = 0; -- No contents
+CONTENTS_SOLID = 0x1; -- an eye is never valid in a solid
+CONTENTS_WINDOW = 0x2; -- translucent, but not watery (glass)
+CONTENTS_AUX = 0x4;
+CONTENTS_GRATE = 0x8; -- alpha-tested "grate" textures.  Bullets/sight pass through, but solids
+CONTENTS_SLIME = 0x10;
+CONTENTS_WATER = 0x20;
+CONTENTS_BLOCKLOS = 0x40; -- block AI line of sight
+CONTENTS_OPAQUE = 0x80;
+LAST_VISIBLE_CONTENTS = 0x80 -- things that cannot be seen through (may be non-solid though)
+
+ALL_VISIBLE_CONTENTS = bit32.band(LAST_VISIBLE_CONTENTS, (LAST_VISIBLE_CONTENTS-1));
+CONTENTS_TESTFOGVOLUME = 0x100;
+CONTENTS_UNUSED = 0x200;
+
+-- unused
+-- NOTE: If it's visible, grab from the top + update LAST_VISIBLE_CONTENTS
+-- if not visible, then grab from the bottom.
+CONTENTS_UNUSED6 = 0x400;
+CONTENTS_TEAM1 = 0x800;
+CONTENTS_TEAM2 = 0x1000;
+
+-- ignore CONTENTS_OPAQUE on surfaces that have SURF_NODRAW
+CONTENTS_IGNORE_NODRAW_OPAQUE = 0x2000
+
+-- hits entities which are MOVETYPE_PUSH (doors, plats, etc.)
+CONTENTS_MOVEABLE = 0x4000;
+
+-- remaining contents are non-visible, and don't eat brushes
+CONTENTS_AREAPORTAL = 0x8000;
+
+CONTENTS_PLAYERCLIP = 0x10000;
+CONTENTS_MONSTERCLIP = 0x20000;
+
+-- currents can be added to any other contents, and may be mixed
+CONTENTS_CURRENT_0 = 0x40000;
+CONTENTS_CURRENT_90 = 0x80000;
+CONTENTS_CURRENT_180 = 0x100000;
+CONTENTS_CURRENT_270 = 0x200000;
+CONTENTS_CURRENT_UP = 0x400000;
+CONTENTS_CURRENT_DOWN = 0x800000;
+
+CONTENTS_ORIGIN = 0x1000000 -- removed before bsping an entity
+
+CONTENTS_MONSTER = 0x2000000 -- should never be on a brush, only in game
+CONTENTS_DEBRIS =  0x4000000;
+CONTENTS_DETAIL = 0x8000000; -- brushes to be added after vis leafs
+CONTENTS_TRANSLUCENT = 0x10000000; -- auto set if any surface has trans
+CONTENTS_LADDER = 0x20000000;
+CONTENTS_HITBOX = 0x40000000; -- use accurate hitboxes on trace
+
+
+-- NOTE: These are stored in a short in the engine now.  Don't use more than 16 bits
+SURF_LIGHT = 0x0001; -- value will hold the light strength
+SURF_SKY2D = 0x0002; -- don't draw, indicates we should skylight + draw 2d sky but not draw the 3D skybox
+SURF_SKY = 0x0004; -- don't draw, but add to skybox
+SURF_WARP = 0x0008; -- turbulent water warp
+SURF_TRANS = 0x0010;
+SURF_NOPORTAL = 0x0020; -- the surface can not have a portal placed on it
+SURF_TRIGGER = 0x0040; -- FIXME: This is an xbox hack to work around elimination of trigger surfaces, which breaks occluders
+SURF_NODRAW = 0x0080; -- don't bother referencing the texture
+
+SURF_HINT = 0x0100; -- make a primary bsp splitter
+
+SURF_SKIP = 0x0200; -- completely ignore, allowing non-closed brushes
+SURF_NOLIGHT = 0x0400; -- Don't calculate light
+SURF_BUMPLIGHT = 0x0800; -- calculate three lightmaps for the surface for bumpmapping
+SURF_NOSHADOWS = 0x1000; -- Don't receive shadows
+SURF_NODECALS = 0x2000; -- Don't receive decals
+SURF_NOCHOP = 0x4000; -- Don't subdivide patches on this surface 
+SURF_HITBOX = 0x8000; -- surface is part of a hitbox
+
+-------------------------------------------------------
+-- spatial content masks - used for spatial queries (traceline,etc.)
+-------------------------------------------------------
+MASK_ALL = (0xFFFFFFFF);
+-- everything that is normally solid
+MASK_SOLID = bit32.bor(CONTENTS_SOLID,  bit32.bor(CONTENTS_MOVEABLE,  bit32.bor(CONTENTS_WINDOW,  bit32.bor(CONTENTS_MONSTER, CONTENTS_GRATE))));
+-- everything that blocks player movement
+MASK_PLAYERSOLID = bit32.bor(CONTENTS_SOLID, bit32.bor(CONTENTS_MOVEABLE, bit32.bor(CONTENTS_PLAYERCLIP, bit32.bor(CONTENTS_WINDOW, bit32.bor(CONTENTS_MONSTER,CONTENTS_GRATE)))));
+-- blocks npc movement
+MASK_NPCSOLID = bit32.bor(CONTENTS_SOLID, bit32.bor(CONTENTS_MOVEABLE, bit32.bor(CONTENTS_MONSTERCLIP, bit32.bor(CONTENTS_WINDOW, bit32.bor(CONTENTS_MONSTER, CONTENTS_GRATE)))));
+-- water physics in these contents
+MASK_WATER = bit32.bor(CONTENTS_WATER, bit32.bor(CONTENTS_MOVEABLE, CONTENTS_SLIME));
+-- everything that blocks lighting
+MASK_OPAQUE = bit32.bor(CONTENTS_SOLID, bit32.bor(CONTENTS_MOVEABLE, CONTENTS_OPAQUE));
+-- everything that blocks lighting, but with monsters added.
+MASK_OPAQUE_AND_NPCS = bit32.bor(MASK_OPAQUE, CONTENTS_MONSTER);
+-- everything that blocks line of sight for AI
+MASK_BLOCKLOS = bit32.bor(CONTENTS_SOLID, bit32.bor(CONTENTS_MOVEABLE, CONTENTS_BLOCKLOS));
+-- everything that blocks line of sight for AI plus NPCs
+MASK_BLOCKLOS_AND_NPCS = bit32.bor(MASK_BLOCKLOS, CONTENTS_MONSTER);
+-- everything that blocks line of sight for players
+MASK_VISIBLE = bit32.bor(MASK_OPAQUE, CONTENTS_IGNORE_NODRAW_OPAQUE);
+-- everything that blocks line of sight for players, but with monsters added.
+MASK_VISIBLE_AND_NPCS = bit32.bor(MASK_OPAQUE_AND_NPCS, CONTENTS_IGNORE_NODRAW_OPAQUE);
+-- bullets see these as solid
+MASK_SHOT = bit32.bor(CONTENTS_SOLID, bit32.bor(CONTENTS_MOVEABLE, bit32.bor(CONTENTS_MONSTER, bit32.bor(CONTENTS_WINDOW, bit32.bor(CONTENTS_DEBRIS, CONTENTS_HITBOX)))));
+-- non-raycasted weapons see this as solid (includes grates)
+MASK_SHOT_HULL = bit32.bor(CONTENTS_SOLID, bit32.bor(CONTENTS_MOVEABLE, bit32.bor(CONTENTS_MONSTER, bit32.bor(CONTENTS_WINDOW, bit32.bor(CONTENTS_DEBRIS, CONTENTS_GRATE)))));
+-- hits solids (not grates) and passes through everything else
+MASK_SHOT_PORTAL = bit32.bor(CONTENTS_SOLID,  bit32.bor(CONTENTS_MOVEABLE, bit32.bor(CONTENTS_WINDOW,CONTENTS_MONSTER)));
+-- everything normally solid, except monsters (world+brush only)
+MASK_SOLID_BRUSHONLY = bit32.bor(CONTENTS_SOLID, bit32.bor(CONTENTS_MOVEABLE, bit32.bor(CONTENTS_WINDOW, CONTENTS_GRATE)));
+-- everything normally solid for player movement, except monsters (world+brush only)
+MASK_PLAYERSOLID_BRUSHONLY = bit32.bor(CONTENTS_SOLID, bit32.bor(CONTENTS_MOVEABLE, bit32.bor(CONTENTS_WINDOW, bit32.bor(CONTENTS_PLAYERCLIP, CONTENTS_GRATE))));
+-- everything normally solid for npc movement, except monsters (world+brush only)
+MASK_NPCSOLID_BRUSHONLY = bit32.bor(CONTENTS_SOLID, bit32.bor(CONTENTS_MOVEABLE, bit32.bor(CONTENTS_WINDOW, bit32.bor(CONTENTS_MONSTERCLIP, CONTENTS_GRATE))));
+-- just the world, used for route rebuilding
+MASK_NPCWORLDSTATIC = bit32.bor(CONTENTS_SOLID, bit32.bor(CONTENTS_WINDOW, bit32.bor(CONTENTS_MONSTERCLIP, CONTENTS_GRATE)));
+-- These are things that can split areaportals
+MASK_SPLITAREAPORTAL = bit32.bor(CONTENTS_WATER, CONTENTS_SLIME);
+
+-- UNDONE: This is untested, any moving water
+MASK_CURRENT = bit32.bor(CONTENTS_CURRENT_0, bit32.bor(CONTENTS_CURRENT_90, bit32.bor(CONTENTS_CURRENT_180, bit32.bor(CONTENTS_CURRENT_270, bit32.bor(CONTENTS_CURRENT_UP, CONTENTS_CURRENT_DOWN)))));
+
+-- everything that blocks corpse movement
+-- UNDONE: Not used yet / may be deleted
+MASK_DEADSOLID = bit32.bor(CONTENTS_SOLID, bit32.bor(CONTENTS_PLAYERCLIP, bit32.bor(CONTENTS_WINDOW, CONTENTS_GRATE)));
 ```
