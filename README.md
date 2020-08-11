@@ -5,7 +5,7 @@ Documentation for nixware.cc AdvancedAPI lua
 Move AdvancedAPI.lua in directory Steam directory/steamapps/common/Counter-Strike Global Offensive/lua
 
 ## Script globals
-ADVANCED_API_VERSION = 1.4; -- Current AdvancedAPI version
+ADVANCED_API_VERSION = 1.5; -- Current AdvancedAPI version
 
 ## Available netvars
 - m_fFlags
@@ -16,6 +16,10 @@ ADVANCED_API_VERSION = 1.4; -- Current AdvancedAPI version
 - m_angEyeAngles
 - m_flSimulationTime
 - m_flOldSimulationTime
+- m_iAccount
+- m_bBombTicking
+- m_flC4Blow
+- m_nBombSite
 - m_lifeState
 - m_bPinPulled
 - m_fThrowTime
@@ -50,11 +54,103 @@ typedef wchar_t WCHAR;
 typedef const WCHAR* LPCWSTR;
 FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
 HMODULE GetModuleHandleA(LPCSTR lpModuleName);
+
+struct WeaponInfo_t
+{
+	char _0x0000[20];
+	__int32 max_clip;	
+	char _0x0018[12];
+	__int32 max_reserved_ammo;
+	char _0x0028[96];
+	char* hud_name;			
+	char* weapon_name;		
+	char _0x0090[60];
+	__int32 type;			
+	__int32 price;			
+	__int32 reward;			
+	char _0x00D8[20];
+	bool full_auto;		
+	char _0x00ED[3];
+	__int32 damage;			
+	float armor_ratio;		 
+	__int32 bullets;	
+	float penetration;	
+	char _0x0100[8];
+	float range;			
+	float range_modifier;	
+	char _0x0110[16];
+	bool silencer;			
+	char _0x0121[15];
+	float max_speed;		
+	float max_speed_alt;
+	char _0x0138[76];
+	__int32 recoil_seed;
+	char _0x0188[32];
+};
+
+typedef struct { 
+	float x,y,z; 
+} vec3_t; 
+	
+struct CBaseAnimState
+{
+	void* pThis;
+	char pad2[91];
+	void* pBaseEntity; 
+	void* pActiveWeapon; 
+	void* pLastActiveWeapon; 
+	float m_flLastClientSideAnimationUpdateTime; 
+	int m_iLastClientSideAnimationUpdateFramecount; 
+	float m_flEyePitch; 
+	float m_flEyeYaw; 
+	float m_flPitch; 
+	float m_flGoalFeetYaw; 
+	float m_flCurrentFeetYaw;
+	float m_flCurrentTorsoYaw; 
+	float m_flUnknownVelocityLean;
+	float m_flLeanAmount; 
+	char pad4[4];
+	float m_flFeetCycle;
+	float m_flFeetYawRate;
+	float m_fUnknown2;
+	float m_fDuckAmount; 
+	float m_fLandingDuckAdditiveSomething; 
+	float m_fUnknown3;
+	vec3_t m_vOrigin;
+	vec3_t m_vLastOrigin; 
+	float m_vVelocityX; 
+	float m_vVelocityY;
+	char pad5[4];
+	float m_flUnknownFloat1;
+	char pad6[8];
+	float m_flUnknownFloat2;
+	float m_flUnknownFloat3; 
+	float m_flUnknown; 
+	float speed_2d; 
+	float flUpVelocity; 
+	float m_flSpeedNormalized; 
+	float m_flFeetSpeedForwardsOrSideWays; 
+	float m_flFeetSpeedUnknownForwardOrSideways;
+	float m_flTimeSinceStartedMoving; 
+	float m_flTimeSinceStoppedMoving;
+	unsigned char m_bOnGround; 
+	unsigned char m_bInHitGroundAnimation;
+	char pad7[10];
+	float m_flLastOriginZ; 
+	float m_flHeadHeightOrOffsetFromHittingGroundAnimation; 
+	float m_flStopToFullRunningFraction; 
+	char pad8[4];
+	float m_flUnknownFraction; 
+	char pad9[4];
+	float m_flUnknown3;
+	char pad10[528];
+};
 ```
 
 ## Math variables
 - NULL = 0
 - M_PI = 3.14159265358979323846  -- PI Number
+- M_PI_2 = 6.2831853071795862; -- PI Number, multiplicated by 2
 - M_180_PI = 0.0174533  -- PI Number, divided by 180
 - M_PI_180 = 57.2958    -- PI Number, multiplicated by 180
 - INT_MAX  = 2147483647 -- From C/C++ library
@@ -64,7 +160,6 @@ HMODULE GetModuleHandleA(LPCSTR lpModuleName);
 ### round(x) - Rounding a number
 x - Number for rounding
 ```
-
 local x = round(1.5); -- returns integer
 ```
 ### hasbit(x, p) - Checking if number has a specific bit 
@@ -363,7 +458,20 @@ local m_flGoalFeetYaw = ApproachAngle(m_flEyeYaw, m_flGoalFeetYaw, ((m_flStopToF
 local Delta = AngleDifference(m_flGoalFeetYaw, LowerBodyYaw); -- returns float
 ```
 
+## Renderer helpers
+### IsOnScreen(Vector2D) -- Checking if vector2d is on screen
+- Vector2D - vec2_t, what we want to know
+```
+local OnScreen = IsOnScreen(vec2_t.new(0, 0)); -- returns boolean
+```
 
+### DrawOutlined3DCircle(vOrigin, Radius, Segments, Color) -- Drawing circle on origin
+- vOrigin - vec3_t, origin, where we want to draw circle
+- Radius - int/float, circle radius
+- Segments - int/float, circle segments
+```
+DrawOutlined3DCircle(vec3_t.new(0, 0, 0), 15, 30, color_t.new(255, 255, 255, 255));
+```
 
 ## Helper functions
 ### HasC4(Player) -- Checking if player has c4
@@ -379,7 +487,16 @@ local C4 = HasC4(LocalPlayer);
 local LocalPlayer = entitylist:get_local_player();
 local ActiveWeaponHandle = LocalPlayer:get_prop_int(m_hActiveWeapon);
 local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
-local WeaponData = GetWeaponData(Weapon); -- returns cdata<int*> object
+local WeaponData = GetWeaponData(Weapon); -- returns cdata<WeaponInfo_t*> object
+-- To use values from struct do WeaponData.{struct value}
+```
+
+### GetAnimstate(Player) -- Getting CBaseAnimState struct of player
+- Player - entity_t what we want to get animstate
+```
+local LocalPlayer = entitylist:get_local_player();
+local Animstate = GetAnimstate(LocalPlayer);
+- To use values from struct do Animstate.{struct value}
 ```
 
 ### IsKnife(Weapon) -- Checking if weapon is knife
@@ -451,21 +568,6 @@ client.register_callback("paint", function()
 	Timer.listener();
 end);
 ```
-
-## Structures and enums
-### WeaponInfo_t -- Not finished yet, because brain issue
-```
-WEAPDATA_MAX_CLIP = 0x05;
-WEAPDATA_MAX_RESERVED_AMMO = 0x09; -- Max clip 2
-WEAPDATA_TYPE = 0x28;
-WEAPDATA_COST = 0x34;
--- Here should be reward, but i have some issues with brain
-WEAPDATA_DAMAGE = 0x60;
-WEAPDATA_ARMORRATIO = 0x64; -- float
-WEAPDATA_BULLETS = 0x68; -- I think, that's unused
-WEAPDATA_PENETRATION = 0x72; -- float
-```
-
 
 ### MoveType_t
 ```
