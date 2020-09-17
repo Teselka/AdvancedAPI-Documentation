@@ -5,7 +5,7 @@ Documentation for nixware.cc AdvancedAPI lua
 Move AdvancedAPI.lua in directory Steam directory/steamapps/common/Counter-Strike Global Offensive/lua
 
 ## Script globals
-ADVANCED_API_VERSION = 1.5; -- Current AdvancedAPI version
+ADVANCED_API_VERSION = 1.6; -- Current AdvancedAPI version
 
 ## Available netvars
 - m_fFlags
@@ -25,6 +25,7 @@ ADVANCED_API_VERSION = 1.5; -- Current AdvancedAPI version
 - m_fThrowTime
 - m_flLowerBodyYawTarget
 - m_bGunGameImmunity
+- m_flFlashMaxAlpha
 - m_flFlashDuration
 - m_bIsScoped
 - m_flNextAttack
@@ -55,7 +56,7 @@ typedef const WCHAR* LPCWSTR;
 FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
 HMODULE GetModuleHandleA(LPCSTR lpModuleName);
 
-struct WeaponInfo_t
+struct weaponinfo_t
 {
 	char _0x0000[20];
 	__int32 max_clip;	
@@ -92,7 +93,7 @@ typedef struct {
 	float x,y,z; 
 } vec3_t; 
 	
-struct CBaseAnimState
+struct animstate_t
 {
 	void* pThis;
 	char pad2[91];
@@ -116,7 +117,7 @@ struct CBaseAnimState
 	float m_fDuckAmount; 
 	float m_fLandingDuckAdditiveSomething; 
 	float m_fUnknown3;
-	vec3_t m_vOrigin;
+	vec3_t m_origin;
 	vec3_t m_vLastOrigin; 
 	float m_vVelocityX; 
 	float m_vVelocityY;
@@ -148,429 +149,337 @@ struct CBaseAnimState
 ```
 
 ## Math variables
-- NULL = 0
-- M_PI = 3.14159265358979323846  -- PI Number
-- M_PI_2 = 6.2831853071795862; -- PI Number, multiplicated by 2
-- M_180_PI = 0.0174533  -- PI Number, divided by 180
-- M_PI_180 = 57.2958    -- PI Number, multiplicated by 180
-- INT_MAX  = 2147483647 -- From C/C++ library
-- INFINITE = math.huge  -- Infinte number from lua math library
+- math.null = 0
+- math.pi_2 = 6.2831853071795862  -- PI Number, multiplicated by 2
+- math.m_180_pi = 0.0174533  	  -- PI Number, divided by 180
+- math.m_pi_180 = 57.2958    	  -- PI Number, multiplicated by 180
+- math.int_max = 2147483647  	  -- From C/C++ library, max integer
+- math.flt_epsilon = 1.192093e-07 -- Machine's zero
+
+## vec3_t supported functions
+### vec3_t:normalize() -- Normalizing vector like viewangles
+```lua
+local normalized = vec3_t.new(90, 181, 49):normalize(); -- Returns vec3_t object
+```
+### vec3_t:to_angle() -- Converts vec3_t into angle_t object
+```lua
+local angle = vec3_t.new(20, 40, 50):to_angle(); -- Returns angle_t object
+```
+### vec3_t:normalize_in_place() -- Normalizing vector
+```lua
+local radius = vec3_t.new(90, 181, 50):normalize_in_place(); -- Returns number
+```
+### vec3_t:extend(yaw, extension) -- Extends vector into yaw direction
+yaw - Number, direction
+extension - Number, extension amount
+```lua
+local extended = vec3_t.new(0, 0, 0):extend(180, 35); -- Returns vec3_t object
+```
+### vec3_t:dot(a) -- Calculating dot product of two vectors
+```
+local a = vec3_t.new(50, 50, 50);
+local dot = vec3_t.new(10, 10, 10):dot(a); -- Returns number
+```
+### vec3_t:dist_to(a) -- Calclulating distance between two vectors`
+a - vec3_t, second vector
+```lua
+local a = vec3_t.new(0, 0, 0);
+local distance = vec3_t.new(10, 10, 10):dist_to(a); -- Returns number
+```
+### vec3_t:lengthsqr() -- Calculating square length of vector
+```lua
+local lengthsqr = vec3_t:new(10, 10, 10):lengthsqr();
+```
+
+## vec2_t supported functions
+### vec2_t:normalize() -- Normalizing 2D vector
+```lua
+local length = vec2_t.new(10, 10):normalize(); -- Returns number
+```
+### vec2_t:dot(a) -- Calculating dot product of two vectors
+a - vec2_t, second vector
+```lua
+local a = vec2_t.new(50, 50);
+local dot = vec2_t.new(10, 10):dot(a); -- Returns number
+```
+### vec2_t:dist_to(a) -- Calclulating distance between two vectors
+a - vec2_t, second vector
+```lua
+local a = vec2_t.new(0, 0);
+local distance = vec2_t.new(10, 10):dist_to(a); -- Returns number
+```
+### vec2_t:lengthsqr() -- Calculating squares length
+```lua
+local lengthsqr = vec2_t:new(10, 10):lengthsqr(); -- Returns number
+```
+
+## angle_t supported functions
+### angle_t:normalize() -- Normalizing angle like viewangles
+```lua
+local normalized = angle_t.new(90, 181, 49):normalize(); -- Returns angle_t object
+```
+### angle_t:to_vec() -- Converts angle_t into vec3_t object
+```lua
+local vector = angle_t.new(20, 40, 50):to_vec(); -- Returns vec3_t object
+```
+### angle_t:lengthsqr() -- Calculating squares length
+```lua
+local lengthsqr = angle_t:new(10, 10, 10):lengthsqr(); -- Returns number
+```
 
 ## Math functions
-### round(x) - Rounding a number
+### math.random_float(min, max) -- Returns random float, using vstdlib
+min - Number min value
+max - Number max value
+```lua
+local random = math.random_float(0, 10);
+```
+
+### math.round(x) -- Rounding a number
 x - Number for rounding
-```
-local x = round(1.5); -- returns integer
-```
-### hasbit(x, p) - Checking if number has a specific bit 
-- x - Number
-- p - Sought bit
+```lua
+local rounded = math.round(0.3);
 ```
 
-local Flags = LocalPlayer:get_prop_int(m_fFlags);
-local OnGround = hasbit(Flags, FL_ONGROUND); -- returns boolean
+### math.hasbit(x, p) -- Checking if number has a specific bit
+x - Number
+p - Sought bit
+```lua
+local holding_fire = math.hasbit(cmd.buttons, IN_ATTACK);
 ```
 
-### clamp(x, min, max) - Clamping x value
-- x   - Number for clamping
-- min - Min number value
-- max - Max number value
-```
-local x = clamp(5, 0, 4); -- returns integer
-```
-
-### RandomFloat(min, max) - Returns random float, using vstdlib
-- min - Min number value
-- max - Max number value
-```
-local randflt = RandomFloat(0, 10); -- returns float
+### math.clamp(x, min, max) -- Clamping x value
+x - Number for clamping
+min - Min number value
+max - Max number value
+```lua
+local x = clamp(5, 0, 4); -- Returns number
 ```
 
-### IsInfinite(x) - Checking if number is infinite
-- x - number for checking
-```
-local IsInf = IsInfinite(INFINITE); -- returns boolean
-```
-
-### IsNaN(x) -- Checking if number is NaN
-- x - Number for checking
-```
-local NaN = 0/0;
-local isnan = IsNaN(NaN) -- returns boolean
+### math.is_infinite(x) -- Checking if number is infinite
+x - Number what we want to check
+```lua
+local is_infinite = math.is_infinite(math.huge);
 ```
 
-### NormalizePitch(pitch) -- Normalizing pitch angle (Only for player's viewangles)
-- pitch - Pitch for normalizing
-```
-local NormalizedPitch = NormalizePitch(-INT_MAX); -- returns integer
-```
-
-### NormalizeYaw(yaw) -- Normalizing yaw angle (Only for player's viewangles)
-- yaw - Yaw for normalizing
-```
-local NormalizedYaw = NormalizeYaw(-INT_MAX); -- returns integer
+### math.is_nan(x) -- Checking if number is NaN
+x - Number what we want to check
+```lua
+local is_nan = math.is_nan(0);
 ```
 
-### NormalizeRoll(roll) -- Normalizing roll angle (Only for player's viewangles)
-- roll - Roll for normalizing
-```
-local NormalizedRoll = NormalizeRoll(-INT_MAX); -- returns integer
-```
-
-### NormalizeAngle(vAngle) -- Normalizing angle_t (aka Valve's QAngle) (Only for player's viewangles)
-- vAngle - Angle for normalizing 
-```
-local NormalizedAngle = angle_t.new(-INFINITE, INFINITE, 0); -- returns angle_t object
+### math.normalize_pitch(pitch) -- Normalizing pitch angle (Only for player's viewangles)
+pitch - target pitch
+```lua
+local pitch = math.normalize_pitch(-133); -- Returns number
 ```
 
-### NormalizeVector(vAngle) -- Normalizing vec3_t (Only for player's viewangles) (Same as NormalizeAngle, just vector object)
-- vAngle - Vector for normalizing 
-```
-local NormalizedVector = vec3_t.new(-INFINITE, INFINITE, 0); -- returns vec3_t object
-```
-
-### VectorAddition(vFirst, vSecond) -- Additing second vector to first
-- vFirst - Vector for addition
-- vSecond - Vector what is being addited
-```
-local vFirst = vec3_t.new(59, 15.54, 84);
-local vSecond = vec3_t.new(415, 36, 18.48155);
-local Addited = VectorAddition(vFirst, vSecond); -- return vec3_t object
+### math.normalize_yaw(yaw) -- Normalizing yaw angle (Only for player's viewangles)
+yaw - target yaw
+```lua
+local pitch = math.normalize_pitch(722); -- Returns number
 ```
 
-### VectorSubtraction(vFirst, vSecond) -- Subtracting second vector from first
-- vFirst - Vector for subtraction
-- vSecond - Vector what is being subtracted
-```
-local vFirst = vec3_t.new(75.12, 87, 84);
-local vSecond = vec3_t.new(415.5, 36.2, 18.48155);
-local Subtracted = VectorSubtraction(vFirst, vSecond); -- return vec3_t object
+### math.normalize_roll(roll) -- Normalizing roll angle (Only for player's viewangles)
+roll - target roll
+```lua
+local roll = math.normalize_roll(8); -- Returns number
 ```
 
-### VectorDivision(vFirst, vSecond) -- Dividing second vector on first
-- vFirst - Vector for dividing
-- vSecond - Vector on what is being divided
-```
-local vFirst = vec3_t.new(5249, 1542, 8486);
-local vSecond = vec3_t.new(13, 12, 24);
-local Divided = VectorDivision(vFirst, vSecond); -- return vec3_t object
+### math.get_middle_point(a, b) -- -- Calculating middle point between two vectors
+a - vec3_t, first point
+b - vec3_t, second point
+```lua
+local middle_point = math.get_middle_point(vec3_t.new(0, 0, 0), vec3_t.new(50, 50, 50)); -- Returns vec3_t object
 ```
 
-### VectorMultiplication(vFirst, vSecond) -- Multiplicating second vector on first
-- vFirst - Vector for multiplication
-- vSecond - Vector on what is being multiplicated
-```
-local vFirst = vec3_t.new(24, 14, 86);
-local vSecond = vec3_t.new(18, 24, 12);
-local Multiplicated = VectorMultiplication(vFirst, vSecond); -- return vec3_t object
+### math.calc_angle(src, dest) -- Calculating viewangles to aim at target vector
+src - vec3_t, first point
+dest - vec3_t, second point
+```lua
+local calced = math.calc_angle(engine.get_view_angles():to_vec(), vec3_t.new(50, 50, 50)); -- Returns vec3_t object
 ```
 
-### VectorNumberSubtraction(Vector, Number) -- Subtracting number from vector
-- Vector - Vector for subtraction
-- Number what is being subtracted
-```
-local Vector = vec3_t.new(54, 1, 6);
-local Number = vec3_t.new(26, 0.5, 7);
-local Subtracted = VectorNumberSubtraction(Vector, Number); -- return vec3_t object
+### math.rad2deg(x) -- Converting radians to degrees
+x - Number, radians
+```lua
+local degrees = math.rad2deg(1.570797); -- Returns number
 ```
 
-### VectorNumberAddition(Vector, Number) -- Additing number to vector
-- Vector - Vector for additing
-- Number what is being addited
-```
-local Vector = vec3_t.new(42, 0, 0);
-local Number = vec3_t.new(10, 2, 4);
-local Addited = VectorNumberAddition(Vector, Number); -- return vec3_t object
+### math.deg2rad(x) -- Converting degrees to radians
+x - Number, degrees
+```lua
+local radians = math.rad2deg(90); -- Returns number
 ```
 
-### VectorNumberDivision(Vector, Number) -- Dividing number on vector
-- Vector - Vector for dividing
-- Number what is being divited
-```
-local Vector = vec3_t.new(42, 14, 87);
-local Number = vec3_t.new(5, 6, 9);
-local Divided = VectorNumberDivision(Vector, Number); -- return vec3_t object
+### math.angle_vectors(angles) -- Converts a QAngle into or three normalised Vectors, returns table (1 - Forward, 2 - Right, 3 - Up)
+angles - vec3_t, angle to convert
+```lua
+local directions = math.angle_vectors(engine.get_view_angles():to_vec()); -- Returns table
 ```
 
-### VectorNumberMultiplication(Vector, Number) -- Multiplicating number on vector
-- Vector - Vector for multiplication
-- Number what is being multiplicated
-```
-local Vector = vec3_t.new(98, 11, 48);
-local Number = vec3_t.new(1, 4, 9);
-local Multiplicated = VectorNumberMultiplication(Vector, Number); -- returns vec3_t object
+### math.vector_angles(angles) -- Converts a single Vector into a QAngle
+angles - vec3_t, angle to convert
+```lua
+local converted = math.vector_angles(engine.get_view_angles():to_vec()); -- Returns vec3_t object
 ```
 
-### GetMiddlePoint(vFirst, vSecond) -- Calculating middle point between two vectors
-- vFirst - Vector first
-- vSecond - Vector second
-```
-local vSource = VectorAddition(LocalPlayer:get_prop_vector(m_vecOrigin), LocalPlayer:get_prop_vector(m_vecViewOffset));
-local vDest = VectorAddition(Teammate:get_prop_vector(m_vecOrigin), Teammate:get_prop_vector(m_vecViewOffset));
-local MiddlePoint = GetMiddlePoint(vSource, vDest); -- returns vec3_t object
+### math.time_to_ticks(dt) -- Converting time to ticks
+dt - Number, time to convert
+```lua
+local ticks = math.time_to_ticks(lp:get_prop_float(m_flSimulationTime)); -- Returns number
 ```
 
-### CalcAngle(vecSource, vecDestination) -- Calculating viewangles to aim at target vector
-- vecSource - Vector (Forces vector if used angle_t) from we want to aim
-- vecDestination - Vector (Forces vector if used angle_t) on what we want to aim
-```
-local vecSource = VectorAddition(LocalPlayer:get_prop_vector(m_vecOrigin), LocalPlayer:get_prop_vector(m_vecViewOffset));
-local vecDestination = Entity:get_player_hitbox_pos(HITBOX_HEAD);
-local vCalculated = CalcAngle(vecSource, vecDestination); -- returns vec3_t object
+### math.ticks_to_time(t) -- Converting ticks to time
+t - Number, ticks to convert
+```lua
+local time = math.ticks_to_time(globalvars.get_tick_count()); -- Returns number
 ```
 
-### AngleVectors(vAngles) -- Converts a QAngle into either one or three normalised Vectors
-- vAngles - Vector (Forces vector if used angle_t) what we want to convert
-```
-local vAngles = vec3_t.new(21, 78, 0);
-local Vector = AngleVectors(vAngles); -- returns vec3_t object
-```
-
-### VectorAngles(vAngles) -- Converts a single Vector into a QAngle
-- vAngles - Vector (Forces vector if used angle_t) what we want to convert
-```
-local vAngles = vec3_t.new(37, 59, 4884);
-local Vector = AngleVectors(vAngles); -- returns vec3_t object
+### math.rotate_movement(cmd, angles) -- Rotating movement into vAngles direction
+cmd - usercmd_t, local commands
+angles - Number, yaw direction
+```lua
+math.rotate_movement(cmd, 90);
 ```
 
-### GetMaxDesyncDelta(Entity) -- Calculating max desync delta of entity
-- Entity - entity_t what we want to get delta
-```
-local LocalPlayer = entitylist:get_local_player();
-local MaxDesync = GetMaxDesyncDelta(LocalPlayer); -- returns float
-```
-
-### RAD2DEG(x) -- Converting radians to degrees
-- x - Radians what we want to convert
-```
-local Degrees = RAD2DEG(3.14); -- returns float
+### math.approach_angle(target, value, speed)
+target - Number
+value - Number
+speed - Number
+```lua
+local unknown = math.approach_angle(13, 37, 228); -- Returns number
 ```
 
-### DEG2RAD(x) -- Converting degrees to radians
-- x - Degrees what we want to convert
-```
-local Radians = DEG2RAD(180); -- returns float
-```
-
-### VectorDot(vFirst, vSecond) -- Calculating the dot product of two vectors
-- vFirst  - The first vector
-- vSecond - The second vector
-```
-local vFirst = vec3_t.new(13, 37, 14);
-local vSecond = vec3_t.new(88, 100, 7);
-local DotProduct = VectorDot(vFirst, vSecond); -- returns float
+### math.angle_difference(destAngle, srcAngle) -- Getting delta between two angles
+destAngle - Number, first angle
+srcAngle - Number, second angle
+```lua
+local difference = math.angle_difference(lp:get_prop_float(m_flLowerBodyYawTarget), animstate.m_flGoalFeetYaw);
 ```
 
-### VectorLengthSqr(Vector) -- Calculating vector squares length
-- Vector - Vector we want to convert
-```
-local Vector = vec3_t.new(54, 87, 966);
-local LengthSqr = VectorLengthSqr(Vector); -- returns float
-```
-
-### GetFov(viewAngle, aimAngle) -- Calculating fov from first vector to second
-- viewAngle - Vector (Forces vector if used angle_t) first angle
-- aimAngle  - Vector (Forces vector if used angle_t) second angle
-```
-local LocalPlayer = entitylist:get_local_player();
-local vSource = VectorAddition(LocalPlayer:get_prop_vector(m_vecOrigin), LocalPlayer:get_prop_vector(m_vecViewOffset));
-local vDestination = Entity:get_player_hitbox_pos(0);
-local aimAngle = CalcAngle(vSource, vDestination);
-local viewAngle = vec3_t.new(pCmd.pitch, pCmd.yaw, pCmd.roll);
-local Fov = GetFov(viewAngle, aimAngle);
+## FFI functions
+### ffi.is_valid_ptr(p) -- Checking if pointer is valid
+p - cdata/number to check
+```lua
+local nullptr = ffi.new('void*');
+local is_valid = ffi.is_valid_ptr(nullptr);
 ```
 
-### Distance3D(vFirst, vSecond) -- Calculating distance between two 3D vectors (Since 1.4 verison returns smaller value)
-- vFirst  - Vector  what we want to convert
-- vSecond - Vector what we want to convert
-```
-local LocalPlayer = entitylist:get_local_player();
-local vFirst = VectorAddition(LocalPlayer:get_prop_vector(m_vecOrigin), LocalPlayer:get_prop_vector(m_vecViewOffset));
-local vSecond = Entity:get_player_hitbox_pos(HITBOX_HEAD);
-local Distance = Distance3D(vFirst, vSecond); -- returns float
+### ffi.find_interface(module, interface [, print_version]) -- Finds an interface
+module - String, module,where we want to search interface
+interface - Interface what we want to search(Without version)
+print_version - Boolean, prints interface version (optional)
+```lua
+local g_Prediction = ffi.find_interface("client_panorama.dll", "VClientPrediction"); -- Returns number
 ```
 
-### Distance2D(vFirst, vSecond) -- Calculating distance between two 2D vectors
-- vFirst  - Vector2D  what we want to convert
-- vSecond - Vector2D what we want to convert
-```
-local vFirst  = vec2_t.new(0, 0);
-local vSecond = vec2_t.new(100, 100);
-local Distance = Distance2D(vFirst, vSecond); -- returns float
+## entity_t functions
+### entity_t:get_max_desync_delta() -- Calculating max desync delta of entity
+```lua
+local max_delta = lp:get_max_desync_delta(); -- Returns number
 ```
 
-### GetCurtime(Player) -- Calclulating curtime of player
-- Player - entity_t what we want to get curtime
-```
-local LocalPlayer = entitylist:get_local_player();
-local Curtime = GetCurtime(LocalPlayer); -- return flaot
+### entity_t:has_c4() -- Checking if entity has c4
+```lua
+local c4_carrier = lp:has_c4(); -- Returns boolean
 ```
 
-### GetTickrate() -- Calculating server tickrate
-```
-local Tickrate = GetTickrate();
-```
-
-### TIME_TO_TICKS(dt) -- Converting time to ticks
-- dt - Time what we want to convert
-```
-local Ticks = TIME_TO_TICKS(TargetEntity:get_prop_float(m_flSimulationTime) + GetLerpTime()); -- returns float
+### entity_t:get_active_weapon() -- Getting player's active weapon
+```lua
+local weapon = lp:get_active_weapon();
 ```
 
-### TICKS_TO_TIME(t) -- Converting ticks to time
-- t - Ticks waht we want to convert
-```
-local Time = TICKS_TO_TIME(GetLerpTime()); -- returns float
-```
-
-### GetLerpTime() -- Calculating server lerp time
-```
-local LerpTime = GetLerpTime();
+### entity_t:get_vfunc(typedef, index) -- Getting function by index from entity's vtable
+```lua
+local is_player_func = lp:get_vfunc("bool(__thiscall*)(void*)", 157); -- Returns function
 ```
 
-### RotateMovement(pCmd, vAngles) -- Rotating movement into vAngles direction
-- pCmd - usercmd_t needed to get forward, sidemoves and viewangles
-- vAngles - Vector (Forces vector if used angle_t) in what we want to go
-```
-local LocalPlayer = entitylist:get_local_player();
-local vSource = VectorAddition(LocalPlayer:get_prop_vector(m_vecOrigin), LocalPlayer:get_prop_vector(m_vecViewOffset));
-local vAngles = VectorAngles(VectorSubtraction(Entity:get_player_hitbox_pos(HITBOX_HEAD), vSource));
-vAngles = NormalizeVector(vAngles);
-pCmd.forwardmove = 250;
-RotateMovement(pCmd, vAngles);
+### entity_t:is_weapon() -- Checking if entity is weapon
+```lua
+local is_weapon = lp:is_weapon(); -- Returns boolean
 ```
 
-### ApproachAngle(target, value, speed) -- From ValveSDK, no description :(
-#### https://github.com/ValveSoftware/source-sdk-2013/blob/0d8dceea4310fde5706b3ce1c70609d72a38efdf/sp/src/mathlib/mathlib_base.cpp#L3438
-- target - float value
-- value - float value
-- speed - float value
-```
-local m_flGoalFeetYaw = ApproachAngle(m_flEyeYaw, m_flGoalFeetYaw, ((m_flStopToFullRunningFraction * 20.0) + 30.0) * m_iLastClientSideAnimationUpdateFramecount);
--- returns float
+### entity_t:is_player() -- Checking if entity is player
+```lua
+local is_player = lp:is_player(); -- Returns boolean
 ```
 
-### AngleDifference(destAngle, srcAngle) -- From ValveSDK, getting delta between two angles
-#### https://github.com/ValveSoftware/source-sdk-2013/blob/master/sp/src/mathlib/mathlib_base.cpp#L3466
-- destAngle - float first angle
-- srcAngle - float second angle
-```
-local Delta = AngleDifference(m_flGoalFeetYaw, LowerBodyYaw); -- returns float
+### entity_t:get_weapon_data() -- Getting weapon data structure of weapon
+```lua
+local weapon_data = weapon:get_weapon_data(); -- Returns weaponinfo_t
 ```
 
-## Renderer helpers
-### IsOnScreen(Vector2D) -- Checking if vector2d is on screen
-- Vector2D - vec2_t, what we want to know
-```
-local OnScreen = IsOnScreen(vec2_t.new(0, 0)); -- returns boolean
+### entity_t:get_animstate() -- Getting player's animstate
+```lua
+local animstate = lp:get_animstate(); Returns animstate_t object
 ```
 
-### DrawOutlined3DCircle(vOrigin, Radius, Segments, Color) -- Drawing circle on origin
-- vOrigin - vec3_t, origin, where we want to draw circle
-- Radius - int/float, circle radius
-- Segments - int/float, circle segments
-```
-DrawOutlined3DCircle(vec3_t.new(0, 0, 0), 15, 30, color_t.new(255, 255, 255, 255));
+## Weapon data functions
+### entity_t:is_knife() -- Checking if weapon is knife
+```lua
+local is_knife = weapon:is_knife();
 ```
 
-## Helper functions
-### HasC4(Player) -- Checking if player has c4
-- Player - entity_t what we want to check
-```
-local LocalPlayer = entitylist:get_local_player();
-local C4 = HasC4(LocalPlayer);
-```
-
-### GetWeaponData(Weapon) -- Getting WeaponInfo_t struct of weapon
-- Weapon - entity_t active weapon what from we want to get struct
-```
-local LocalPlayer = entitylist:get_local_player();
-local ActiveWeaponHandle = LocalPlayer:get_prop_int(m_hActiveWeapon);
-local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
-local WeaponData = GetWeaponData(Weapon); -- returns cdata<WeaponInfo_t*> object
--- To use values from struct do WeaponData.{struct value}
-```
-
-### GetAnimstate(Player) -- Getting CBaseAnimState struct of player
-- Player - entity_t what we want to get animstate
-```
-local LocalPlayer = entitylist:get_local_player();
-local Animstate = GetAnimstate(LocalPlayer);
-- To use values from struct do Animstate.{struct value}
-```
-
-### IsKnife(Weapon) -- Checking if weapon is knife
-- Weapon - entity_t active weapon what we want to check
-```
-local LocalPlayer = entitylist:get_local_player();
-local ActiveWeaponHandle = LocalPlayer:get_prop_int(m_hActiveWeapon);
-local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
-local Knife = IsKnife(Weapon); -- returns boolean
-```
-
-### IsNade(Weapon) -- Checking if weapon is nade
-- Weapon - entity_t active weapon what we want to check
-```
-local LocalPlayer = entitylist:get_local_player();
-local ActiveWeaponHandle = LocalPlayer:get_prop_int(m_hActiveWeapon);
-local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
-local Nade = IsNade(Weapon); -- returns boolean
+### entity_t:is_nade() -- Checking if weapon is nade
+```lua
+local is_nade = weapon:is_nade();
 ```
 
 ## Exploits
-### IsExploitRecharged(LocalPlayer, Weapon, Exploit) -- Checking if one of exploits is recharged 
-#### Shift values from https://yougame.biz/threads/134913/
-- LocalPlayer - entity_t local player
-- Weapon - entity_t  active weapon
-- Exploit - exploit what we want to know recharge
-```
-local LocalPlayer = entitylist:get_local_player();	
-local ActiveWeaponHandle = LocalPlayer:get_prop_int(m_hActiveWeapon);
-local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
-local IsRecharged = IsExploitRecharged(LocalPlayer, Weapon, ui.get_int("ragebot_active_exploit")); -- returns boolean
+### exploits.is_recharged(local_player, weapon, exploit) -- Checking if one of exploits is recharged
+local_player - entity_t, local player
+weapon - entity_t, local player's weapon
+exploit - number, exploit (0 - 2)
+```lua
+local is_recharged = exploits.is_recharged(lp, weapon, 2);
 ```
 
-### GetExploitCharge(LocalPlayer, Weapon, Exploit) -- Calcuating exploit charge time
-- LocalPlayer - entity_t local player
-- Weapon - entity_t  active weapon
-- Exploit - exploit what we want to know recharge
-```
-local LocalPlayer = entitylist:get_local_player();	
-local ActiveWeaponHandle = LocalPlayer:get_prop_int(m_hActiveWeapon);
-local Weapon = entitylist.get_entity_from_handle(ActiveWeaponHandle);
-local Recharge = GetExploitCharge(LocalPlayer, Weapon, ui.get_int("ragebot_active_exploit")); -- returns float
--- returns 0 if exploit is charged
+### exploits.get_charge(local_player, weapon, exploit) -- Calcuating exploit charge time
+local_player - entity_t, local player
+weapon - entity_t, local player's weapon
+exploit - number, exploit (0 - 2)
+```lua
+local charge = exploits.get_charge(lp, weapon, 2);
 ```
 
-## Libraries
-### Timers lib https://nixware.cc/threads/7591/
-#### Timer.new_timeout(callback, ms) -- Executes function on end of the timer only once
-- callback - Function what we want execute at end of the timer
-- ms - integer delay before executing
-```
-Timer.new_timeout(function()
-   client.notify("Executed!");
-end, 1000);
+## globalvars functions
+### globalvars.get_tickrate() -- Calculating server tickrate
+```lua 
+local tickrate = globalvars:get_tickrate();
 ```
 
-#### Timers.new_interval(callback, ms) -- Executes function on end of the timer and repeating again
-- callback - Function what we want execute at end of the timer
-- ms - integer delay before executing
-```
-Timer.new_interval(function()
-   client.notify("Executed!");
-end, 1000);
+## renderer functions
+### renderer.on_screen(pos2d) -- Checking if 2D vector is on screen
+pos2d - vec2_t, 2d pos on screen
+```lua
+on_screen = renderer.on_screen(vec2_t.new(0, 0));
 ```
 
-#### Timers.listener() -- Listen for all timers (needed for executing it)
-```
-client.register_callback("paint", function()
-	Timer.listener();
-end);
+### renderer.outlined_3d_circle(origin, radius, segments, color, percentage [, walls, skip_entity, mask]) -- Drawing outlined circle 3D on origin
+origin - vec3_t, origin,where we want to draw circle
+radius - number, circle radius
+segments - number, circle segments
+color - color_t, circle color
+percentage - number, circle percentage
+walls - boolean, if circle should trace walls and interract with them
+skip_entity - number, entity to skip in trace (walls required)
+mask - number, trace mask (walls required)
+```lua
+renderer.outlined_3d_circle(vec3_t.new(0, 0, 0), 15, 30, color_t.new(255, 255, 255, 255), 100);
 ```
 
+### renderer.box_3d(origin, width, height, color) -- Drawing 3D box on origin
+origin - vec3_t, origin,where we want to draw box
+width - number, box width
+height - number, box height
+color - color_t, circle color
+```lua
+renderer.box_3d(vec3_t.new(0, 0, 0), 15, 15, color_t.new(255, 255, 255, 255));
+```
+## Enums
 ### MoveType_t
-```
+```lua
 MOVETYPE_NONE = 0; -- Freezes the entity, outside sources can't move it. 
 MOVETYPE_ISOMETRIC = 1; -- For players in TF2 commander view etc. Do not use this for normal players! 
 MOVETYPE_WALK = 2; -- Default player (client) move type. 
@@ -588,7 +497,7 @@ MOVETYPE_MAX_BITS = 4;
 ```
 
 ### Buttons
-```
+```lua
 IN_ATTACK   = 1;       --  (1 << 0)  -- Fire weapon
 IN_JUMP     = 2;       --  (1 << 1)  -- Jump
 IN_DUCK     = 4;       --  (1 << 2)  -- Crouch
@@ -617,8 +526,8 @@ IN_GRENADE2 = 16777216;--  (1 << 24) -- grenade 2
 IN_ATTACK3  = 33554432;--  (1 << 25)
 ```
 
-## EntityFlags
-```
+### EntityFlags
+```lua
 FL_ONGROUND  = 1;  -- (1 << 0), At rest / on the ground
 FL_DUCKING   = 2;  -- (1 << 1), Player flag -- Player is fully crouched
 FL_ANIMDUCKING=4;  -- (1 << 2), Player flag -- Player is in the process of crouching or uncrouching but could be in transition
@@ -638,110 +547,19 @@ FL_INWATER = 1024; -- (1 << 10), // In water
 ```
 
 ### ClientFrameStage_t
-```
-FRAME_UNDEFINED = -1;	-- Haven't run any frames yet
+```lua
+FRAME_UNDEFINED = -1;						-- Haven't run any frames yet
 FRAME_START = 0;
-FRAME_NET_UPDATE_START = 1;	-- A network packet is being recieved
-FRAME_NET_UPDATE_POSTDATAUPDATE_START = 2;-- Data has been received and we're going to start calling PostDataUpdate
+FRAME_NET_UPDATE_START = 1;					-- A network packet is being recieved
+FRAME_NET_UPDATE_POSTDATAUPDATE_START = 2;  -- Data has been received and we're going to start calling PostDataUpdate
 FRAME_NET_UPDATE_POSTDATAUPDATE_END = 3;	-- Data has been received and we've called PostDataUpdate on all data recipients
-FRAME_NET_UPDATE_END = 4;	-- We've received all packets, we can now do interpolation, prediction, etc..
-FRAME_RENDER_START = 5;	-- We're about to start rendering the scene
-FRAME_RENDER_END = 6;	-- We've finished rendering the scene.
-```
-
-### ItemDefinitionIndex
-```
-WEAPON_NONE = 0;
-WEAPON_DEAGLE = 1;
-WEAPON_ELITE = 2;
-WEAPON_FIVESEVEN = 3;
-WEAPON_GLOCK = 4;
-WEAPON_AK47 = 7;
-WEAPON_AUG = 8;
-WEAPON_AWP = 9;
-WEAPON_FAMAS = 10;
-WEAPON_G3SG1 = 11;
-WEAPON_GALILAR = 13;
-WEAPON_M249 = 14;
-WEAPON_M4A1 = 16;
-WEAPON_MAC10 = 17;
-WEAPON_P90 = 19;
-WEAPON_MP5SD = 23;
-WEAPON_UMP45 = 24;
-WEAPON_XM1014 = 25;
-WEAPON_BIZON = 26;
-WEAPON_MAG7 = 27;
-WEAPON_NEGEV = 28;
-WEAPON_SAWEDOFF = 29;
-WEAPON_TEC9 = 30;
-WEAPON_TASER = 31;
-WEAPON_HKP2000 = 32;
-WEAPON_MP7 = 33;
-WEAPON_MP9 = 34;
-WEAPON_NOVA = 35;
-WEAPON_P250 = 36;
-WEAPON_SHIELD = 37;
-WEAPON_SCAR20 = 38;
-WEAPON_SG556 = 39;
-WEAPON_SSG08 = 40;
-WEAPON_KNIFEGG = 41;
-WEAPON_KNIFE = 42;
-WEAPON_FLASHBANG = 43;
-WEAPON_HEGRENADE = 44;
-WEAPON_SMOKEGRENADE = 45;
-WEAPON_MOLOTOV = 46;
-WEAPON_DECOY = 47;
-WEAPON_INCGRENADE = 48;
-WEAPON_C4 = 49;
-WEAPON_HEALTHSHOT = 57;
-WEAPON_KNIFE_T = 59;
-WEAPON_M4A1_SILENCER = 60;
-WEAPON_USP_SILENCER = 61;
-WEAPON_CZ75A = 63;
-WEAPON_REVOLVER = 262208; -- 64
-WEAPON_TAGRENADE = 68;
-WEAPON_FISTS = 69;
-WEAPON_BREACHCHARGE = 70;
-WEAPON_TABLET = 72;
-WEAPON_MELEE = 74;
-WEAPON_AXE = 75;
-WEAPON_HAMMER = 76;
-WEAPON_SPANNER = 78;
-WEAPON_KNIFE_GHOST = 80;
-WEAPON_FIREBOMB = 81;
-WEAPON_DIVERSION = 82;
-WEAPON_FRAG_GRENADE = 83;
-WEAPON_SNOWBALL = 84;
-WEAPON_BUMPMINE = 85;
-WEAPON_BAYONET = 500;
-WEAPON_KNIFE_TACTICAL = 509;
-WEAPON_KNIFE_SURVIVAL_BOWIE = 514;
-WEAPON_KNIFE_PUSH = 516;
-WEAPON_KNIFE_GYPSY_JACKKNIFE = 520;
-WEAPON_KNIFE_WIDOWMAKER = 523;
-WEAPON_KNIFE_BAYONET = 590324;
-WEAPON_KNIFE_FLIP = 590329;
-WEAPON_KNIFE_GUT = 590330;
-WEAPON_KNIFE_KARAMBIT = 590331;
-WEAPON_KNIFE_M9_BAYONET = 590332;
-WEAPON_KNIFE_HUNTSMAN = 590333;
-WEAPON_KNIFE_FALCHION = 590336;
-WEAPON_KNIFE_BOWIE = 590338;
-WEAPON_KNIFE_BUTTERFLY = 590339;
-WEAPON_KNIFE_SHADOW_DAGGERS = 590340;
-WEAPON_KNIFE_URSUS = 590343;
-WEAPON_KNIFE_NAVAJA = 590344;
-WEAPON_KNIFE_STILETTO = 590346;
-WEAPON_KNIFE_TALON = 590347;
-WEAPON_KNIFE_CSS = 590327;
-WEAPON_KNIFE_CORD = 590341;
-WEAPON_KNIFE_CANIS = 590342;
-WEAPON_KNIFE_OUTDOOR = 590345;
-WEAPON_KNIFE_SKELETON = 590349;
+FRAME_NET_UPDATE_END = 4;					-- We've received all packets, we can now do interpolation, prediction, etc..
+FRAME_RENDER_START = 5;						-- We're about to start rendering the scene
+FRAME_RENDER_END = 6;						-- We've finished rendering the scene.
 ```
 
 ### Hitboxes
-```
+```lua
 HITBOX_HEAD = 0;
 HITBOX_NECK = 1;
 HITBOX_PELVIS = 2;
@@ -765,7 +583,7 @@ HITBOX_MAX = 19;
 ```
 
 ### Bspflags
-```
+```lua
 CONTENTS_EMPTY = 0; -- No contents
 CONTENTS_SOLID = 0x1; -- an eye is never valid in a solid
 CONTENTS_WINDOW = 0x2; -- translucent, but not watery (glass)
